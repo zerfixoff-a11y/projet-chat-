@@ -219,6 +219,29 @@
     color: var(--muted);
     margin-top: 4px;
   }
+
+  .error-msg {
+    color: var(--danger);
+    font-size: 12px;
+    margin: 6px 0 0;
+    min-height: 16px;
+  }
+  .switch-mode {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 16px;
+  }
+  .switch-mode a {
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .field-label {
+    text-align: left;
+    font-size: 11px;
+    color: var(--muted);
+    margin: 10px 0 -6px;
+  }
 </style>
 </head>
 <body>
@@ -283,37 +306,129 @@ function render() {
   }
 }
 
+let authMode = "login"; // "login" | "signup"
+let authError = "";
+
 function renderLogin() {
   root.innerHTML = `
     <div class="wrap">
       <div class="login-box">
         <h1>👻 Snap Clone</h1>
-        <p class="subtitle">Choisis un pseudo pour cet onglet</p>
+        <p class="subtitle">${authMode === "login" ? "Connecte-toi à ton compte" : "Crée ton compte"}</p>
+
+        <div class="field-label">Pseudo</div>
         <input id="username-input" placeholder="ex: alice" maxlength="20" autocomplete="off" />
-        <button class="btn-accent btn-full" id="login-btn">Entrer</button>
-        <p class="hint">Astuce : ouvre un 2e onglet avec un autre pseudo pour tester l'ajout d'ami et l'appel.</p>
+
+        <div class="field-label">Mot de passe</div>
+        <input id="password-input" type="password" placeholder="••••••••" autocomplete="off" />
+
+        <p class="error-msg">${authError}</p>
+
+        <button class="btn-accent btn-full" id="login-btn">
+          ${authMode === "login" ? "Se connecter" : "Créer le compte"}
+        </button>
+
+        <p class="switch-mode">
+          ${authMode === "login"
+            ? `Pas encore de compte ? <a id="switch-link">S'inscrire</a>`
+            : `Déjà un compte ? <a id="switch-link">Se connecter</a>`}
+        </p>
+
+        <p class="hint">Astuce : ouvre un 2e onglet et crée un autre compte pour tester l'ajout d'ami et l'appel.</p>
       </div>
     </div>
   `;
-  const input = document.getElementById("username-input");
+  const userInput = document.getElementById("username-input");
+  const passInput = document.getElementById("password-input");
   const btn = document.getElementById("login-btn");
-  function doLogin() {
-    const name = input.value.trim();
-    if (name.length < 2) { input.focus(); return; }
-    loginAs(name);
+  const switchLink = document.getElementById("switch-link");
+
+  function submit() {
+    const username = userInput.value.trim();
+    const password = passInput.value;
+    authError = "";
+
+    if (username.length < 2) {
+      authError = "Le pseudo doit faire au moins 2 caractères.";
+      renderLogin();
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      authError = "Le pseudo ne peut contenir que lettres, chiffres et _.";
+      renderLogin();
+      return;
+    }
+    if (password.length < 4) {
+      authError = "Le mot de passe doit faire au moins 4 caractères.";
+      renderLogin();
+      return;
+    }
+
+    if (authMode === "signup") {
+      handleSignup(username, password);
+    } else {
+      handleLogin(username, password);
+    }
   }
-  btn.onclick = doLogin;
-  input.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
-  input.focus();
+
+  btn.onclick = submit;
+  passInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  userInput.addEventListener("keydown", (e) => { if (e.key === "Enter") passInput.focus(); });
+  switchLink.onclick = () => {
+    authMode = authMode === "login" ? "signup" : "login";
+    authError = "";
+    renderLogin();
+  };
+  userInput.focus();
 }
 
-function loginAs(username) {
+// Hash simple côté client (pas une vraie sécurité cryptographique, mais évite
+// de stocker le mot de passe en clair dans localStorage pour ce prototype local)
+async function hashPassword(password) {
+  const enc = new TextEncoder().encode(password);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function handleSignup(username, password) {
   const users = getUsers();
-  // id stable par pseudo (insensible à la casse) pour pouvoir se reconnecter pareil
   const id = "u_" + username.toLowerCase();
-  users[id] = { id, username };
+
+  if (users[id]) {
+    authError = "Ce pseudo est déjà pris.";
+    renderLogin();
+    return;
+  }
+
+  const passwordHash = await hashPassword(password);
+  users[id] = { id, username, passwordHash };
   saveUsers(users);
+
   me = { id, username };
+  channel.postMessage({ type: "presence", id, online: true });
+  startHeartbeat();
+  render();
+}
+
+async function handleLogin(username, password) {
+  const users = getUsers();
+  const id = "u_" + username.toLowerCase();
+  const user = users[id];
+
+  if (!user) {
+    authError = "Aucun compte avec ce pseudo. Inscris-toi d'abord.";
+    renderLogin();
+    return;
+  }
+
+  const passwordHash = await hashPassword(password);
+  if (passwordHash !== user.passwordHash) {
+    authError = "Mot de passe incorrect.";
+    renderLogin();
+    return;
+  }
+
+  me = { id, username: user.username };
   channel.postMessage({ type: "presence", id, online: true });
   startHeartbeat();
   render();
@@ -335,7 +450,7 @@ function renderApp() {
     <div class="wrap">
       <div class="topbar">
         <h1 style="margin:0">👻 Snap Clone</h1>
-        <div class="me-tag">Connecté en tant que <b>@${me.username}</b> · <button class="btn-ghost" id="logout-btn" style="padding:4px 10px;">Changer</button></div>
+        <div class="me-tag">Connecté en tant que <b>@${me.username}</b> · <button class="btn-ghost" id="logout-btn" style="padding:4px 10px;">Déconnexion</button></div>
       </div>
 
       <div class="grid">
@@ -360,6 +475,8 @@ function renderApp() {
   document.getElementById("logout-btn").onclick = () => {
     channel.postMessage({ type: "presence", id: me.id, online: false });
     me = null;
+    authMode = "login";
+    authError = "";
     render();
   };
 
