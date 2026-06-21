@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Snap Clone - Amis & Appel</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #15151f;
+    --border: #2a2a38;
+    --accent: #ffd60a;
+    --text: #f0f0f5;
+    --muted: #8a8a9a;
+    --danger: #ff4d6d;
+    --green: #2ecc71;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 {
+    font-size: 22px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+
+  .login-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 360px;
+    margin: 80px auto;
+    text-align: center;
+  }
+  .login-box input {
+    width: 100%;
+    background: #0e0e16;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 14px;
+    margin: 12px 0;
+    outline: none;
+  }
+  .login-box input:focus { border-color: var(--accent); }
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 14px;
+    transition: opacity .15s;
+  }
+  button:hover { opacity: .85; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-accent { background: var(--accent); color: #15150a; }
+  .btn-ghost { background: #23232f; color: var(--text); }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-green { background: var(--green); color: #062; }
+  .btn-full { width: 100%; padding: 12px; font-size: 14px; }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .me-tag { font-size: 13px; color: var(--muted); }
+  .me-tag b { color: var(--text); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tab {
+    background: transparent;
+    color: var(--muted);
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .tab.active { background: var(--accent); color: #15150a; }
+
+  .search-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .search-row input {
+    flex: 1;
+    background: #0e0e16;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: var(--text);
+    outline: none;
+    font-size: 13px;
+  }
+
+  .user-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #1c1c28;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .user-row .info { display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #ff9f0a);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: #15150a; font-size: 14px;
+    flex-shrink: 0;
+  }
+  .uname { font-size: 13px; font-weight: 600; }
+  .ustatus { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .dot.online { background: var(--green); }
+  .empty { color: var(--muted); font-size: 13px; padding: 12px 0; text-align: center; }
+
+  .call-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 520px;
+    position: relative;
+  }
+  .call-idle { text-align: center; color: var(--muted); }
+  .call-idle .icon { font-size: 48px; margin-bottom: 12px; }
+
+  video {
+    width: 100%;
+    border-radius: 12px;
+    background: #000;
+  }
+  .video-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+  .video-box { position: relative; }
+  .video-label {
+    position: absolute;
+    bottom: 8px; left: 8px;
+    background: rgba(0,0,0,.6);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+  }
+
+  .call-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    justify-content: center;
+  }
+  .call-controls button {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+  }
+
+  .incoming-call {
+    background: #1c1c28;
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    width: 280px;
+  }
+  .incoming-call .avatar { width: 56px; height: 56px; font-size: 22px; margin: 0 auto 10px; }
+  .incoming-actions { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+
+  .toast {
+    position: fixed;
+    top: 16px; left: 50%;
+    transform: translateX(-50%);
+    background: #1c1c28;
+    border: 1px solid var(--border);
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    z-index: 50;
+    animation: fadein .2s;
+  }
+  @keyframes fadein { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+  .hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+/* =========================================================================
+   STOCKAGE PARTAGE ENTRE ONGLETS (localStorage = "base de données" commune)
+   BroadcastChannel = "réseau" commun pour les messages temps réel / signaling
+   ========================================================================= */
+const LS_KEY = "snapclone_users_v1";
+const LS_FRIENDS_KEY = "snapclone_friendships_v1";
+const LS_REQUESTS_KEY = "snapclone_requests_v1";
+const channel = new BroadcastChannel("snapclone_channel");
+
+function loadJSON(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+  catch { return fallback; }
+}
+function saveJSON(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function getUsers() { return loadJSON(LS_KEY, {}); }
+function saveUsers(u) { saveJSON(LS_KEY, u); }
+
+function getFriendships() { return loadJSON(LS_FRIENDS_KEY, []); } // [[idA, idB], ...]
+function saveFriendships(f) { saveJSON(LS_FRIENDS_KEY, f); }
+
+function getRequests() { return loadJSON(LS_REQUESTS_KEY, []); } // [{from, to}]
+function saveRequests(r) { saveJSON(LS_REQUESTS_KEY, r); }
+
+function initials(name) {
+  return name.slice(0, 2).toUpperCase();
+}
+
+/* =========================================================================
+   ETAT DE SESSION (propre à cet onglet)
+   ========================================================================= */
+let me = null; // { id, username }
+let activeTab = "friends";
+let onlineUsers = new Set(); // ids vus comme en ligne via heartbeat
+let inCall = false;
+let callPeerId = null;
+let callPeerName = null;
+let incomingCall = null; // { fromId, fromName, offer }
+let localStream = null;
+let remoteStream = null;
+let pc = null; // RTCPeerConnection
+
+const root = document.getElementById("app");
+
+/* =========================================================================
+   RENDU
+   ========================================================================= */
+function render() {
+  if (!me) {
+    renderLogin();
+  } else {
+    renderApp();
+  }
+}
+
+function renderLogin() {
+  root.innerHTML = `
+    <div class="wrap">
+      <div class="login-box">
+        <h1>👻 Snap Clone</h1>
+        <p class="subtitle">Choisis un pseudo pour cet onglet</p>
+        <input id="username-input" placeholder="ex: alice" maxlength="20" autocomplete="off" />
+        <button class="btn-accent btn-full" id="login-btn">Entrer</button>
+        <p class="hint">Astuce : ouvre un 2e onglet avec un autre pseudo pour tester l'ajout d'ami et l'appel.</p>
+      </div>
+    </div>
+  `;
+  const input = document.getElementById("username-input");
+  const btn = document.getElementById("login-btn");
+  function doLogin() {
+    const name = input.value.trim();
+    if (name.length < 2) { input.focus(); return; }
+    loginAs(name);
+  }
+  btn.onclick = doLogin;
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+  input.focus();
+}
+
+function loginAs(username) {
+  const users = getUsers();
+  // id stable par pseudo (insensible à la casse) pour pouvoir se reconnecter pareil
+  const id = "u_" + username.toLowerCase();
+  users[id] = { id, username };
+  saveUsers(users);
+  me = { id, username };
+  channel.postMessage({ type: "presence", id, online: true });
+  startHeartbeat();
+  render();
+}
+
+function renderApp() {
+  const users = getUsers();
+  const friendships = getFriendships();
+  const requests = getRequests();
+
+  const myFriendIds = friendships
+    .filter(([a, b]) => a === me.id || b === me.id)
+    .map(([a, b]) => (a === me.id ? b : a));
+
+  const received = requests.filter((r) => r.to === me.id);
+  const sent = requests.filter((r) => r.from === me.id);
+
+  root.innerHTML = `
+    <div class="wrap">
+      <div class="topbar">
+        <h1 style="margin:0">👻 Snap Clone</h1>
+        <div class="me-tag">Connecté en tant que <b>@${me.username}</b> · <button class="btn-ghost" id="logout-btn" style="padding:4px 10px;">Changer</button></div>
+      </div>
+
+      <div class="grid">
+        <div class="panel">
+          <div class="tabs">
+            <button class="tab ${activeTab === "friends" ? "active" : ""}" data-tab="friends">Amis</button>
+            <button class="tab ${activeTab === "search" ? "active" : ""}" data-tab="search">Rechercher</button>
+            <button class="tab ${activeTab === "requests" ? "active" : ""}" data-tab="requests">
+              Demandes${received.length ? ` (${received.length})` : ""}
+            </button>
+          </div>
+
+          <div id="tab-content"></div>
+        </div>
+
+        <div class="panel call-stage" id="call-stage"></div>
+      </div>
+    </div>
+    <div id="incoming-overlay"></div>
+  `;
+
+  document.getElementById("logout-btn").onclick = () => {
+    channel.postMessage({ type: "presence", id: me.id, online: false });
+    me = null;
+    render();
+  };
+
+  document.querySelectorAll(".tab").forEach((el) => {
+    el.onclick = () => { activeTab = el.dataset.tab; renderApp(); };
+  });
+
+  renderTabContent(users, myFriendIds, received, sent);
+  renderCallStage();
+  renderIncomingOverlay();
+}
+
+function renderTabContent(users, myFriendIds, received, sent) {
+  const container = document.getElementById("tab-content");
+
+  if (activeTab === "friends") {
+    if (myFriendIds.length === 0) {
+      container.innerHTML = `<div class="empty">Aucun ami pour l'instant.<br/>Va dans "Rechercher" pour en ajouter.</div>`;
+      return;
+    }
+    container.innerHTML = myFriendIds.map((fid) => {
+      const u = users[fid];
+      if (!u) return "";
+      const online = onlineUsers.has(fid);
+      return `
+        <div class="user-row">
+          <div class="info">
+            <div class="avatar">${initials(u.username)}</div>
+            <div>
+              <div class="uname">@${u.username}</div>
+              <div class="ustatus"><span class="dot ${online ? "online" : ""}"></span>${online ? "En ligne" : "Hors ligne"}</div>
+            </div>
+          </div>
+          <button class="btn-accent" data-call="${fid}" ${online ? "" : "disabled"}>📞 Appeler</button>
+        </div>
+      `;
+    }).join("");
+    container.querySelectorAll("[data-call]").forEach((btn) => {
+      btn.onclick = () => startCall(btn.dataset.call);
+    });
+    return;
+  }
+
+  if (activeTab === "search") {
+    container.innerHTML = `
+      <div class="search-row">
+        <input id="search-input" placeholder="Pseudo à rechercher..." autocomplete="off" />
+      </div>
+      <div id="search-results"></div>
+    `;
+    const input = document.getElementById("search-input");
+    const resultsEl = document.getElementById("search-results");
+
+    function doSearch() {
+      const q = input.value.trim().toLowerCase();
+      const all = getUsers();
+      const friendships = getFriendships();
+      const requests = getRequests();
+      const myFriendIds = friendships.filter(([a,b]) => a===me.id||b===me.id).map(([a,b]) => a===me.id?b:a);
+
+      const results = Object.values(all).filter((u) =>
+        u.id !== me.id &&
+        u.username.toLowerCase().includes(q) &&
+        q.length >= 1
+      );
+
+      if (q.length === 0) {
+        resultsEl.innerHTML = `<div class="empty">Tape un pseudo pour chercher.</div>`;
+        return;
+      }
+      if (results.length === 0) {
+        resultsEl.innerHTML = `<div class="empty">Aucun utilisateur trouvé.<br/>(Connecte-le d'abord depuis un autre onglet)</div>`;
+        return;
+      }
+
+      resultsEl.innerHTML = results.map((u) => {
+        const isFriend = myFriendIds.includes(u.id);
+        const alreadySent = requests.some((r) => r.from === me.id && r.to === u.id);
+        let action;
+        if (isFriend) action = `<span class="hint">Déjà ami</span>`;
+        else if (alreadySent) action = `<span class="hint">En attente</span>`;
+        else action = `<button class="btn-accent" data-add="${u.id}">Ajouter</button>`;
+
+        return `
+          <div class="user-row">
+            <div class="info">
+              <div class="avatar">${initials(u.username)}</div>
+              <div class="uname">@${u.username}</div>
+            </div>
+            ${action}
+          </div>
+        `;
+      }).join("");
+
+      resultsEl.querySelectorAll("[data-add]").forEach((btn) => {
+        btn.onclick = () => {
+          sendFriendRequest(btn.dataset.add);
+          doSearch();
+        };
+      });
+    }
+
+    input.addEventListener("input", doSearch);
+    doSearch();
+    return;
+  }
+
+  if (activeTab === "requests") {
+    let html = `<div class="hint" style="margin-bottom:8px;">REÇUES</div>`;
+    if (received.length === 0) {
+      html += `<div class="empty">Aucune demande reçue</div>`;
+    } else {
+      html += received.map((r) => {
+        const u = users[r.from];
+        return `
+          <div class="user-row">
+            <div class="info">
+              <div class="avatar">${initials(u.username)}</div>
+              <div class="uname">@${u.username}</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-green" data-accept="${r.from}">✓</button>
+              <button class="btn-ghost" data-decline="${r.from}">✕</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    html += `<div class="hint" style="margin:14px 0 8px;">ENVOYÉES</div>`;
+    if (sent.length === 0) {
+      html += `<div class="empty">Aucune demande envoyée</div>`;
+    } else {
+      html += sent.map((r) => {
+        const u = users[r.to];
+        return `
+          <div class="user-row">
+            <div class="info">
+              <div class="avatar">${initials(u.username)}</div>
+              <div class="uname">@${u.username}</div>
+            </div>
+            <span class="hint">En attente</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    container.innerHTML = html;
+    container.querySelectorAll("[data-accept]").forEach((btn) => {
+      btn.onclick = () => { respondToRequest(btn.dataset.accept, true); };
+    });
+    container.querySelectorAll("[data-decline]").forEach((btn) => {
+      btn.onclick = () => { respondToRequest(btn.dataset.decline, false); };
+    });
+  }
+}
+
+function renderCallStage() {
+  const stage = document.getElementById("call-stage");
+  if (!stage) return;
+
+  if (!inCall) {
+    stage.innerHTML = `
+      <div class="call-idle">
+        <div class="icon">📹</div>
+        <div>Appelle un ami en ligne pour démarrer un appel vidéo</div>
+      </div>
+    `;
+    return;
+  }
+
+  stage.innerHTML = `
+    <div style="width:100%;">
+      <div class="video-grid">
+        <div class="video-box">
+          <video id="local-video" autoplay muted playsinline></video>
+          <div class="video-label">Toi</div>
+        </div>
+        <div class="video-box">
+          <video id="remote-video" autoplay playsinline></video>
+          <div class="video-label">${callPeerName || "..."}</div>
+        </div>
+      </div>
+      <div class="call-controls">
+        <button class="btn-ghost" id="toggle-mic" title="Micro">🎤</button>
+        <button class="btn-ghost" id="toggle-cam" title="Caméra">📷</button>
+        <button class="btn-danger" id="hangup-btn" title="Raccrocher">📵</button>
+      </div>
+    </div>
+  `;
+
+  const localVideo = document.getElementById("local-video");
+  const remoteVideo = document.getElementById("remote-video");
+  if (localStream) localVideo.srcObject = localStream;
+  if (remoteStream) remoteVideo.srcObject = remoteStream;
+
+  document.getElementById("hangup-btn").onclick = () => endCall(true);
+  document.getElementById("toggle-mic").onclick = (e) => {
+    if (!localStream) return;
+    const track = localStream.getAudioTracks()[0];
+    if (track) { track.enabled = !track.enabled; e.target.style.opacity = track.enabled ? 1 : 0.4; }
+  };
+  document.getElementById("toggle-cam").onclick = (e) => {
+    if (!localStream) return;
+    const track = localStream.getVideoTracks()[0];
+    if (track) { track.enabled = !track.enabled; e.target.style.opacity = track.enabled ? 1 : 0.4; }
+  };
+}
+
+function renderIncomingOverlay() {
+  const el = document.getElementById("incoming-overlay");
+  if (!el) return;
+  if (!incomingCall) { el.innerHTML = ""; return; }
+
+  el.innerHTML = `
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:40;">
+      <div class="incoming-call">
+        <div class="avatar">${initials(incomingCall.fromName)}</div>
+        <div style="font-weight:600;">@${incomingCall.fromName}</div>
+        <div class="hint">Appel entrant...</div>
+        <div class="incoming-actions">
+          <button class="btn-green" id="accept-call-btn">✓ Accepter</button>
+          <button class="btn-danger" id="decline-call-btn">✕ Refuser</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById("accept-call-btn").onclick = acceptIncomingCall;
+  document.getElementById("decline-call-btn").onclick = declineIncomingCall;
+}
+
+function showToast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+/* =========================================================================
+   AMIS
+   ========================================================================= */
+function sendFriendRequest(toId) {
+  const requests = getRequests();
+  if (requests.some((r) => r.from === me.id && r.to === toId)) return;
+
+  // Si l'autre a déjà envoyé une demande, on accepte direct (comme le backend réel)
+  const reverse = requests.find((r) => r.from === toId && r.to === me.id);
+  if (reverse) {
+    respondToRequest(toId, true);
+    return;
+  }
+
+  requests.push({ from: me.id, to: toId });
+  saveRequests(requests);
+  channel.postMessage({ type: "friend_request", from: me.id, to: toId });
+}
+
+function respondToRequest(fromId, accept) {
+  let requests = getRequests();
+  requests = requests.filter((r) => !(r.from === fromId && r.to === me.id));
+  saveRequests(requests);
+
+  if (accept) {
+    const friendships = getFriendships();
+    friendships.push([me.id, fromId]);
+    saveFriendships(friendships);
+    channel.postMessage({ type: "friend_accepted", users: [me.id, fromId] });
+  }
+  renderApp();
+}
+
+/* =========================================================================
+   PRESENCE (heartbeat simple)
+   ========================================================================= */
+function startHeartbeat() {
+  onlineUsers.add(me.id);
+  channel.postMessage({ type: "presence", id: me.id, online: true });
+  setInterval(() => {
+    channel.postMessage({ type: "presence", id: me.id, online: true });
+  }, 3000);
+  window.addEventListener("beforeunload", () => {
+    channel.postMessage({ type: "presence", id: me.id, online: false });
+  });
+}
+
+/* =========================================================================
+   APPEL WEBRTC (signaling via BroadcastChannel = le "serveur" local)
+   ========================================================================= */
+const RTC_CONFIG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+async function getMedia() {
+  if (localStream) return localStream;
+  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  return localStream;
+}
+
+function createPeerConnection(targetId) {
+  const conn = new RTCPeerConnection(RTC_CONFIG);
+
+  conn.onicecandidate = (e) => {
+    if (e.candidate) {
+      channel.postMessage({ type: "ice", from: me.id, to: targetId, candidate: e.candidate });
+    }
+  };
+
+  conn.ontrack = (e) => {
+    remoteStream = e.streams[0];
+    renderCallStage();
+  };
+
+  conn.onconnectionstatechange = () => {
+    if (["disconnected", "failed", "closed"].includes(conn.connectionState) && inCall) {
+      endCall(false);
+    }
+  };
+
+  return conn;
+}
+
+async function startCall(targetId) {
+  const users = getUsers();
+  const target = users[targetId];
+  if (!target) return;
+
+  try {
+    await getMedia();
+  } catch (err) {
+    showToast("Impossible d'accéder à la caméra/micro");
+    return;
+  }
+
+  inCall = true;
+  callPeerId = targetId;
+  callPeerName = target.username;
+  renderApp();
+
+  pc = createPeerConnection(targetId);
+  localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  channel.postMessage({
+    type: "call_offer",
+    from: me.id,
+    fromName: me.username,
+    to: targetId,
+    offer,
+  });
+}
+
+async function acceptIncomingCall() {
+  const { fromId, fromName, offer } = incomingCall;
+  incomingCall = null;
+
+  try {
+    await getMedia();
+  } catch (err) {
+    showToast("Impossible d'accéder à la caméra/micro");
+    renderApp();
+    return;
+  }
+
+  inCall = true;
+  callPeerId = fromId;
+  callPeerName = fromName;
+  renderApp();
+
+  pc = createPeerConnection(fromId);
+  localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+
+  channel.postMessage({ type: "call_answer", from: me.id, to: fromId, answer });
+}
+
+function declineIncomingCall() {
+  if (!incomingCall) return;
+  channel.postMessage({ type: "call_declined", from: me.id, to: incomingCall.fromId });
+  incomingCall = null;
+  renderApp();
+}
+
+function endCall(notifyPeer) {
+  if (notifyPeer && callPeerId) {
+    channel.postMessage({ type: "call_end", from: me.id, to: callPeerId });
+  }
+  if (pc) { pc.close(); pc = null; }
+  if (localStream) { localStream.getTracks().forEach((t) => t.stop()); localStream = null; }
+  remoteStream = null;
+  inCall = false;
+  callPeerId = null;
+  callPeerName = null;
+  renderApp();
+}
+
+/* =========================================================================
+   ECOUTE DES MESSAGES INTER-ONGLETS
+   ========================================================================= */
+channel.onmessage = async (e) => {
+  const msg = e.data;
+  if (!me) return;
+
+  switch (msg.type) {
+    case "presence": {
+      if (msg.online) onlineUsers.add(msg.id);
+      else onlineUsers.delete(msg.id);
+      if (activeTab === "friends") renderApp();
+      break;
+    }
+
+    case "friend_request": {
+      if (msg.to === me.id) {
+        showToast(`Nouvelle demande d'ami de @${getUsers()[msg.from]?.username || "?"}`);
+        if (activeTab === "requests") renderApp();
+      }
+      break;
+    }
+
+    case "friend_accepted": {
+      if (msg.users.includes(me.id)) {
+        renderApp();
+      }
+      break;
+    }
+
+    case "call_offer": {
+      if (msg.to !== me.id) return;
+      if (inCall) {
+        // déjà en appel : on decline automatiquement
+        channel.postMessage({ type: "call_declined", from: me.id, to: msg.from });
+        return;
+      }
+      incomingCall = { fromId: msg.from, fromName: msg.fromName, offer: msg.offer };
+      renderApp();
+      break;
+    }
+
+    case "call_answer": {
+      if (msg.to !== me.id || !pc) return;
+      await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+      break;
+    }
+
+    case "ice": {
+      if (msg.to !== me.id || !pc) return;
+      try { await pc.addIceCandidate(msg.candidate); } catch {}
+      break;
+    }
+
+    case "call_declined": {
+      if (msg.to !== me.id) return;
+      showToast("Appel refusé");
+      endCall(false);
+      break;
+    }
+
+    case "call_end": {
+      if (msg.to !== me.id) return;
+      showToast("L'appel a été terminé");
+      endCall(false);
+      break;
+    }
+  }
+};
+
+render();
+</script>
+</body>
+</html>
